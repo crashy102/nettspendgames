@@ -9,6 +9,10 @@
     <script src="https://crashy102.github.io/nettspendgames/ruffle/ruffle.js"></script>
     <script>
       window.RufflePlayer = window.RufflePlayer || {};
+      window.RufflePlayer.config = {
+        "autoplay": "on",
+        "backgroundColor": "#000000",
+      };
       window.addEventListener("load", (event) => {
         const ruffle = window.RufflePlayer.newest();
         const player = ruffle.createPlayer();
