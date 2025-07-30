@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Backup / Restore Game Saves</title>
+</head>
+<body>
+  <h1>Backup & Restore Game Saves</h1>
+  <button onclick="exportData()">Export Saves</button>
+  <input type="file" id="importFile" />
+  <button onclick="importData()">Import Saves</button>
+
+  <script>
+    async function exportData() {
+      const exportObj = {
+        localStorage: {},
+        sessionStorage: {},
+        indexedDB: {}
+      };
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        exportObj.localStorage[key] = localStorage.getItem(key);
+      }
+
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        exportObj.sessionStorage[key] = sessionStorage.getItem(key);
+      }
+
+      const dbs = await indexedDB.databases?.() || [];
+      for (const dbInfo of dbs) {
+        const dbName = dbInfo.name;
+        if (!dbName) continue;
+        const dbDump = {};
+        await new Promise((resolve) => {
+          const openReq = indexedDB.open(dbName);
+          openReq.onsuccess = () => {
+            const db = openReq.result;
+            const tx = db.transaction(db.objectStoreNames, 'readonly');
+            const pending = [];
+
+            for (const storeName of db.objectStoreNames) {
+              dbDump[storeName] = [];
+              const store = tx.objectStore(storeName);
+              const getAll = store.getAll();
+              getAll.onsuccess = () => {
+                dbDump[storeName] = getAll.result;
+              };
+              pending.push(getAll);
+            }
+
+            tx.oncomplete = () => {
+              exportObj.indexedDB[dbName] = dbDump;
+              db.close();
+              resolve();
+            };
+          };
+          openReq.onerror = () => resolve();
+        });
+      }
+
+      const blob = new Blob([JSON.stringify(exportObj)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "game_backup.json";
+      a.click();
+    }
+
+    async function importData() {
+      const file = document.getElementById("importFile").files[0];
+      if (!file) return alert("No file selected.");
+
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      for (const [key, value] of Object.entries(data.localStorage || {})) {
+        localStorage.setItem(key, value);
+      }
+
+      for (const [key, value] of Object.entries(data.sessionStorage || {})) {
+        sessionStorage.setItem(key, value);
+      }
+
+      for (const [dbName, stores] of Object.entries(data.indexedDB || {})) {
+        await new Promise((resolve) => {
+          const openReq = indexedDB.open(dbName);
+          openReq.onsuccess = () => {
+            const db = openReq.result;
+            const tx = db.transaction(db.objectStoreNames, 'readwrite');
+            for (const [storeName, values] of Object.entries(stores)) {
+              if (!db.objectStoreNames.contains(storeName)) continue;
+              const store = tx.objectStore(storeName);
+              values.forEach(v => store.put(v));
+            }
+            tx.oncomplete = () => {
+              db.close();
+              resolve();
+            };
+          };
+          openReq.onerror = () => resolve();
+        });
+      }
+
+      alert("Save data restored!");
+    }
+  </script>
+</body>
+</html>
