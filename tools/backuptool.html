@@ -1,15 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Backup / Restore Game Saves</title>
+  <title>Game Save Backup & Restore</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #121212;
+      color: #f0f0f0;
+      padding: 2em;
+      text-align: center;
+    }
+
+    button, input[type="file"] {
+      background-color: #1f1f1f;
+      color: white;
+      border: 1px solid #444;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background-color: #333;
+    }
+
+    #output {
+      margin-top: 2em;
+      text-align: left;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      background-color: #1e1e1e;
+      padding: 1em;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 0.5em;
+    }
+
+    h2 {
+      margin-top: 1.5em;
+    }
+  </style>
 </head>
 <body>
-  <h1>Backup & Restore Game Saves</h1>
-  <button onclick="exportData()">Export Saves</button>
+  <h1>🎮 Game Save Backup & Restore</h1>
+  <button onclick="exportData()">📤 Export Saves</button>
   <input type="file" id="importFile" />
-  <button onclick="importData()">Import Saves</button>
+  <button onclick="importData()">📥 Import Saves</button>
+
+  <div id="output"></div>
 
   <script>
+    const output = document.getElementById("output");
+
+    function logOutput(title, obj) {
+      output.innerHTML += `<h2>${title}</h2><pre>${JSON.stringify(obj, null, 2)}</pre>`;
+    }
+
     async function exportData() {
       const exportObj = {
         localStorage: {},
@@ -17,16 +70,19 @@
         indexedDB: {}
       };
 
+      // LocalStorage
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         exportObj.localStorage[key] = localStorage.getItem(key);
       }
 
+      // SessionStorage
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
         exportObj.sessionStorage[key] = sessionStorage.getItem(key);
       }
 
+      // IndexedDB
       const dbs = await indexedDB.databases?.() || [];
       for (const dbInfo of dbs) {
         const dbName = dbInfo.name;
@@ -36,24 +92,37 @@
           const openReq = indexedDB.open(dbName);
           openReq.onsuccess = () => {
             const db = openReq.result;
+
+            // Skip DBs with no stores
+            if (db.objectStoreNames.length === 0) {
+              db.close();
+              return resolve();
+            }
+
             const tx = db.transaction(db.objectStoreNames, 'readonly');
-            const pending = [];
+            let pendingStores = db.objectStoreNames.length;
 
             for (const storeName of db.objectStoreNames) {
-              dbDump[storeName] = [];
               const store = tx.objectStore(storeName);
               const getAll = store.getAll();
               getAll.onsuccess = () => {
                 dbDump[storeName] = getAll.result;
+                pendingStores--;
+                if (pendingStores === 0) {
+                  exportObj.indexedDB[dbName] = dbDump;
+                  db.close();
+                  resolve();
+                }
               };
-              pending.push(getAll);
+              getAll.onerror = () => {
+                pendingStores--;
+                if (pendingStores === 0) {
+                  exportObj.indexedDB[dbName] = dbDump;
+                  db.close();
+                  resolve();
+                }
+              };
             }
-
-            tx.oncomplete = () => {
-              exportObj.indexedDB[dbName] = dbDump;
-              db.close();
-              resolve();
-            };
           };
           openReq.onerror = () => resolve();
         });
@@ -68,32 +137,57 @@
     }
 
     async function importData() {
+      output.innerHTML = ""; // Clear old output
       const file = document.getElementById("importFile").files[0];
       if (!file) return alert("No file selected.");
 
       const text = await file.text();
       const data = JSON.parse(text);
 
+      // Log file contents
+      logOutput("📥 Loaded Backup File", data);
+
+      // Restore localStorage
       for (const [key, value] of Object.entries(data.localStorage || {})) {
         localStorage.setItem(key, value);
       }
 
+      // Restore sessionStorage
       for (const [key, value] of Object.entries(data.sessionStorage || {})) {
         sessionStorage.setItem(key, value);
       }
 
+      // Restore IndexedDB
       for (const [dbName, stores] of Object.entries(data.indexedDB || {})) {
         await new Promise((resolve) => {
           const openReq = indexedDB.open(dbName);
           openReq.onsuccess = () => {
             const db = openReq.result;
+
+            if (db.objectStoreNames.length === 0) {
+              db.close();
+              return resolve();
+            }
+
             const tx = db.transaction(db.objectStoreNames, 'readwrite');
+
             for (const [storeName, values] of Object.entries(stores)) {
               if (!db.objectStoreNames.contains(storeName)) continue;
               const store = tx.objectStore(storeName);
-              values.forEach(v => store.put(v));
+              values.forEach(v => {
+                try {
+                  store.put(v);
+                } catch (e) {
+                  console.warn(`Couldn't put value in ${storeName}`, v);
+                }
+              });
             }
+
             tx.oncomplete = () => {
+              db.close();
+              resolve();
+            };
+            tx.onerror = () => {
               db.close();
               resolve();
             };
@@ -102,7 +196,7 @@
         });
       }
 
-      alert("Save data restored!");
+      alert("✅ Save data restored!");
     }
   </script>
 </body>
