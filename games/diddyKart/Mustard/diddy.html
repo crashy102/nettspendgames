@@ -69,7 +69,7 @@
   <div id="input">_____</div>
 
   <div id="numpad">
-    <!-- Numbers 1-9 -->
+
     <button class="btn">1</button>
     <button class="btn">2</button>
     <button class="btn">3</button>
@@ -79,25 +79,23 @@
     <button class="btn">7</button>
     <button class="btn">8</button>
     <button class="btn">9</button>
-    <!-- Extra row: Clear, 0, Backspace -->
+
     <button class="btn" id="clear">C</button>
     <button class="btn">0</button>
     <button class="btn" id="back">&larr;</button>
   </div>
 
-  <!-- Overlay on wrong password -->
   <div id="overlay">
     <img src="lock.png" alt="Access Denied">
   </div>
 
-  <!-- Sound -->
   <audio id="errorSound" src="error.mp3" preload="auto"></audio>
   <audio id="phonkSound" src="phonk.mp3" preload="auto"></audio>
 <audio id="fartSound" src="fart.mp3" preload="auto"></audio>
 <audio id="bartSound" src="glick.mp3" preload="auto"></audio>
 
   <script>
-    const correctPassword = "919416"; // Change this to your desired 5-digit password
+    const correctPassword = "919416";
     let entered = "";
 
     const inputDisplay = document.getElementById("input");
@@ -138,16 +136,14 @@
   if (entered === correctPassword) {
     // ✅ Update header
     const header = document.querySelector("h1");
-    const newURL = "https://sites.google.com/view/nett-games/home/evil-games"; // Change this to your real URL
+    const newURL = "https://sites.google.com/view/nett-games/home/uqrcgnr78bn";
 
     header.textContent = newURL;
     header.style.color = "limegreen";
 
-    // ✅ Change background image
     document.body.style.backgroundImage = "url('labubu.png')";
 	phonkSound.play();
 
-    // Optional: Clear input & disable buttons
     resetInput();
     buttons.forEach(btn => btn.disabled = true);
 
@@ -158,7 +154,6 @@
  document.body.style.backgroundImage = "url('blizziboi.jpg')";
 bartSound.play();
   } else {
-    // ❌ Wrong password: show overlay & sound
     overlay.style.display = "flex";
     errorSound.play();
   }
@@ -169,3 +164,4 @@ bartSound.play();
   </script>
 </body>
 </html>
+
