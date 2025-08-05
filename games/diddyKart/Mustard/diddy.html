@@ -133,7 +133,7 @@
 
     function checkPassword() {
       if (entered === correctPassword) {
-        window.location.href = "https://sites.google.com/view/nett-games/home/evil-games"; // Redirect to target page
+        window.top.location.href = "https://sites.google.com/view/nett-games/home/evil-games"; // Redirect to target page
       } else {
         overlay.style.display = "flex";
         errorSound.play();
@@ -149,4 +149,5 @@
   </script>
 </body>
 </html>
+
 
