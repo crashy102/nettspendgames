@@ -4,7 +4,6 @@ host for nettgames (it's on an allow list right now to keep it underground like 
 feel free to nab these<br>
 my school doesn't block github.io<br>
 if yours does then find a provider that isn't blocked and reupload them there<br>
-ALSO FEEL FREE TO USE THE RUFFLE SOURCE IF RUFFLE'S SITE IS BLOCKED FOR YOU
 
 >[!WARNING]
 >THE SITE DOESN'T HAVE NAVIGATION, WE JUST USE GOOGLE SITES<br>
